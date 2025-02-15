@@ -7,6 +7,9 @@
 
 clear
 
+## Numeros das versoes LTS
+LTS=("4.2" "3.6" "3.3" "2.93" "2.83")
+
 # Diretório onde procurar pelas subpastas do Blender
 DIRETORIO="$HOME/Programas/blender"
 
@@ -15,6 +18,9 @@ if [[ ! -d "$DIRETORIO" ]]; then
     echo -e "\e[31m\u2639 O diretório especificado não existe.\e[0m"
     exit 1
 fi
+
+## Procura por arquivos compactados na pasta indicada
+~/my_bash/descompac-tarxz.sh "$DIRETORIO"
 
 echo -e "\e[33m"
 echo "
@@ -30,33 +36,6 @@ echo "
 └──────────────────────────────────────────────────────────────┘
 "
 echo -e "\e[0m"
-
-## Função para comparar versões
-compare_versoes() {
-    ## Divide os números de versão em arrays
-    IFS='.' read -r -a VERSAO1 <<< "$1"
-    IFS='.' read -r -a VERSAO2 <<< "$2"
-    
-    ## Compare cada segmento das versões
-    for i in "${!VERSAO1[@]}"; do
-        if [[ -z "${VERSAO2[i]}" ]]; then
-            return 1
-        fi
-        if ((10#${VERSAO1[i]} > 10#${VERSAO2[i]})); then
-            return 1
-        elif ((10#${VERSAO1[i]} < 10#${VERSAO2[i]})); then
-            return 2
-        fi
-    done
-    
-    if [[ ${#VERSAO1[@]} -gt ${#VERSAO2[@]} ]]; then
-        return 1
-    elif [[ ${#VERSAO1[@]} -lt ${#VERSAO2[@]} ]]; then
-        return 2
-    fi
-    
-    return 0
-}
 
 ## Inicializa variáveis
 VERSOES=()
@@ -74,28 +53,41 @@ done
 
 ## Adiciona opção de sair
 VERSOES=("Sair" "${VERSOES[@]}")
-echo ${VERSOES[@]}
 
 ## Verifica se encontrou mais de uma versão
-if [[ ${#VERSOES[@]} -gt 2 ]]; then
-    echo -e "\nForam encontradas múltiplas versões do Blender:"
-    PS3="Selecione a versão do Blender para executar (ou 1 para sair): "
-    select OPT in "${VERSOES[@]}"; do
-        if [[ $REPLY -eq 1 ]]; then
-            echo -e "\nSaindo sem executar nenhuma versão."
-            exit 0
-        elif [[ $REPLY -gt 1 && $REPLY -le ${#VERSOES[@]} ]]; then
-            ESCOLHA=$((REPLY-1))
-            break
+if [[ ${#VERSOES[@]} -gt 1 ]]; then
+    echo -e "\nForam encontradas múltiplas versões do \e[33mBlender\e[0m:"
+    VERSAOSELECIONADA="Selecione a versão para executar (ou 0 para sair): "
+    
+    ## Exibe a lista de opções com a numeração correta
+    for i in "${!VERSOES[@]}"; do
+        NUMVERSAO="${VERSOES[$i]:0:3}"
+        if [[ " ${LTS[@]} " =~ " ${NUMVERSAO} " ]]; then ## Testa se é uma versão LTS
+            echo -e " \e[33mLTS\e[0m $i) ${VERSOES[i]}"
+        else
+            echo -e "     $i) ${VERSOES[i]}"
+        fi
+    done
+    
+    ## Solicita a escolha do usuário
+    while true; do
+        echo " "
+        read -rp "$VERSAOSELECIONADA" ESCOLHA
+        if [[ $ESCOLHA =~ ^[0-9]+$ ]] && [[ $ESCOLHA -ge 0 && $ESCOLHA -lt ${#VERSOES[@]} ]]; then
+            if [[ $ESCOLHA -eq 0 ]]; then
+                echo -e "\nSaindo sem executar nenhuma versão."
+                exit 0
+            else
+                ESCOLHA=$((ESCOLHA-1))
+                break
+            fi
         else
             echo -e "\e[31m\u2639 Opção inválida.\e[0m"
         fi
     done
-    ULTIMA_PASTA="${PASTAS[$((ESCOLHA-1))]}"
-elif [[ ${#VERSOES[@]} -eq 2 ]]; then
-    ULTIMA_PASTA="${PASTAS[0]}"
+    ULTIMA_PASTA="${PASTAS[$ESCOLHA]}"
 else
-    echo -e "\n\e[33m\u2716 Nenhuma pasta do Blender encontrada no diretório:\e[0m $DIRETORIO"
+    echo -e "\n\e[33m\u2716 Nenhuma pasta do Blender foi encontrada no diretório:\e[0m $DIRETORIO"
     exit 1
 fi
 
@@ -104,10 +96,11 @@ if [[ -n $ULTIMA_PASTA ]]; then
     BLENDER_EXECUTAVEL="${ULTIMA_PASTA%/}/blender"
     if [[ -x $BLENDER_EXECUTAVEL ]]; then
         echo -e "\n\e[36m\u26A1 Executando a versão selecionada:\e[0m $BLENDER_EXECUTAVEL"
+        xdotool windowminimize $(xdotool getactivewindow)
         "$BLENDER_EXECUTAVEL" --start-console --window-maximized
     else
-        echo -e "\n\e[33m\u2716 Arquivo Blender não encontrado ou não é executável:\e[0m $BLENDER_EXECUTAVEL"
+        echo -e "\n\e[33m\u2716 Arquivo Blender não foi encontrado ou não é executável:\e[0m $BLENDER_EXECUTAVEL"
     fi
 else
-    echo -e "\n\e[33m\u2716 Nenhuma pasta do Blender encontrada no diretório:\e[0m $DIRETORIO"
+    echo -e "\n\e[33m\u2716 Nenhuma pasta do Blender foi encontrada no diretório:\e[0m $DIRETORIO"
 fi
