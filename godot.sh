@@ -9,8 +9,6 @@ clear
 
 
 ## Diretório onde procurar pelos arquivos da Godot
-##   altere o caminho para refletir a localização dos seus
-##   arquivos das versões Godot.
 DIRETORIO="$HOME/Programas/godot"
 
 
